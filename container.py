@@ -9,6 +9,9 @@ class Container:
         self.height: int = height
         self.items: list[Item] = []
 
+    def reset(self):
+        self.items = []
+
     def get_volume(self) -> int:
         return self.length * self.width * self.height
 
@@ -29,7 +32,16 @@ class Container:
         if x + length > self.length or y + width > self.width or z + height > self.height:
             return False
 
-        return all([not item.overlap(other_item) for other_item in self.items])
+        old_position = item.position
+        item.position = position
+
+        if all([not item.overlap(other_item) for other_item in self.items]):
+            item.position = old_position
+            return True
+        
+        item.position = old_position
+        return False
+        
 
     def add_item(self, item: Item, position: list[int]) -> bool:
         if self.check_item_fit(item, position):

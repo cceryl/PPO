@@ -9,10 +9,10 @@ class Encoder:
         pass
 
     def encode_item(self, item: Item) -> np.ndarray:
-        return np.array([item.length, item.width, item.height])
+        return np.array([item.length, item.width, item.height]).flatten().astype(int)
 
     def encode_items(self, items: list[Item]) -> np.ndarray:
-        return np.array([self.encode_item(item) for item in items])
+        return np.array([self.encode_item(item) for item in items]).flatten().astype(int)
 
     def encode_container(self, container: Container) -> np.ndarray:
         """
@@ -26,14 +26,16 @@ class Encoder:
         for item in container.items:
             x, y, z = item.position
             length, width, height = item.get_dimension()
-            height_map[x:x+length, y:y+width] = max(height_map[x:x+length, y:y+width], z + height)
+    
+            for i in range(x, x + length):
+                for j in range(y, y + width):
+                    height_map[i, j] = max(height_map[i, j], z + height)
+
 
         encoded = np.zeros((container.length, container.width, 3), dtype=int)
         for x in range(container.length):
             for y in range(container.width):
                 h = height_map[x, y]
-                if h == 0:
-                    continue
 
                 dist_near_len = 0
                 for i in range(x, container.length):
@@ -49,4 +51,8 @@ class Encoder:
 
                 encoded[x, y] = np.array([h, dist_near_len, dist_near_wid])
 
-        return encoded
+        return encoded.flatten().astype(int)
+
+    def encode_state(self, container: Container, items: list[Item], padding: int = 0) -> np.ndarray:
+        items = items + [Item('', 0, 0, 0)] * padding
+        return np.concatenate([self.encode_items(items), self.encode_container(container)]).astype(int)  

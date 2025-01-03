@@ -1,4 +1,4 @@
-from enum import RotationType
+from constants import RotationType
 
 
 class Item:
