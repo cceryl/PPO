@@ -60,9 +60,13 @@ def generate_items(length: int, width: int, height: int, n: int) -> list[Item]:
     """
     Split a large item into smaller items.
     """
-    item_sizes = [[length, width, height]]
 
-    while (len(item_sizes) < n):
+    item_sizes = [[length, width, height]]
+    max_steps = 1000
+
+    while (len(item_sizes) < n and max_steps > 0):
+        max_steps -= 1
+
         item = item_sizes.pop(random.choices(
             range(len(item_sizes)),
             weights=[item[0] * item[1] * item[2] for item in item_sizes],
@@ -77,9 +81,8 @@ def generate_items(length: int, width: int, height: int, n: int) -> list[Item]:
 
         position = random.normalvariate(0.5, 0.1)
         position = int(position * item[axis])
-        position = max(1, min(position, item[axis] - 1))
 
-        if position == 1 or position == item[axis] - 1:
+        if position == 0 or position == item[axis]:
             item_sizes.append(item)
             continue
 
@@ -94,5 +97,8 @@ def generate_items(length: int, width: int, height: int, n: int) -> list[Item]:
 
         item_sizes.append(item1)
         item_sizes.append(item2)
+
+    if max_steps == 0:
+        raise Exception('Failed to generate items: reached max steps')
 
     return [Item('Item %d' % i, item[0], item[1], item[2]) for i, item in enumerate(item_sizes)]

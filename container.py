@@ -10,7 +10,7 @@ class Container:
         self.length: int = length
         self.width: int = width
         self.height: int = 0
-        self.height_map: np.ndarray = np.zeros((length, width), dtype=int)
+        self.height_map = np.zeros((length, width), dtype=int)
         self.items: list[Item] = []
 
     def reset(self):
@@ -29,30 +29,27 @@ class Container:
         Check if the item fits in the container at the given position.
         """
 
-        length, width, height = item.get_dimension()
-        x, y, z = position
+        length, width, _ = item.get_dimension()
+        x, y, _ = position
 
-        if x < 0 or y < 0 or z < 0:
+        if x < 0 or x + length > self.length or y < 0 or y + width > self.width:
             return False
 
-        if x + length > self.length or y + width > self.width:
-            return False
+        z = np.max(self.height_map[x:x + length, y:y + width])
+        item.position = [x, y, z]
 
-        return True
+        return all([not item.overlap(other_item) for other_item in self.items])
 
     def add_item(self, item: Item, position: list[int]) -> bool:
         if not self.check_item_fit(item, position):
             return False
 
-        length, width, height = item.get_dimension()
-        x, y, z = position
-
-        z = np.max([self.height_map[x:x + length, y:y + width]])
-        item.position = [x, y, z]
-
         self.items.append(item)
 
-        self.height_map[x:x+length, y:y+width] = z + height
+        length, width, height = item.get_dimension()
+        x, y, z = item.position
+
+        self.height_map[x:x + length, y:y + width] = z + height
         self.height = max(self.height, z + height)
 
         return True
@@ -69,6 +66,8 @@ class Container:
         ax.set_xlim(0, self.length)
         ax.set_ylim(0, self.width)
         ax.set_zlim(0, self.height)
+
+        ax.text2D(0.05, 0.95, "Filling ratio: %.2f" % self.get_filling_ratio(), transform=ax.transAxes)
 
     def string(self) -> str:
         return "%s(%sx%sx%s) vol(%s) items(%s) filling_ratio(%s)" % (
