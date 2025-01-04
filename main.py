@@ -1,37 +1,45 @@
-import gym
 from stable_baselines3 import PPO
+from stable_baselines3.common.vec_env import DummyVecEnv
 
-from item import Item
+from item import generate_items
 from container import Container
 from environment import BinPackingEnv
 
-container = Container('Container', 20, 20, 30)
-items = []
-items.append(Item("Item1", 10, 10, 10))
-items.append(Item("Item2", 5, 5, 5))
-items.append(Item("Item3", 5, 5, 5))
-items.append(Item("Item4", 5, 5, 5))
-items.append(Item("Item5", 5, 5, 5))
+container_size = (10, 10)
+items_count = 5
 
 
-BinPackingEnv.register()
-env = gym.make("BinPacking-v0", container=container, items=items)
-
-# model = PPO("MlpPolicy", env, verbose=1)
-# model.learn(total_timesteps=10000)
-# model.save("ppo_binpacking")
-
-model = PPO.load("ppo_binpacking")
+def create_env(items_size: tuple[int, int, int]) -> BinPackingEnv:
+    container = Container('Container', container_size[0], container_size[1])
+    items = generate_items(items_size[0], items_size[1], items_size[2], items_count)
+    return BinPackingEnv(container, items)
 
 
-obs = env.reset()
+# env_fns = [
+#     lambda: create_env((10, 10, 10))
+# ]
+# 
+# envs = DummyVecEnv(env_fns)
+
+envs = create_env((10, 10, 10))
+
+model = PPO("MlpPolicy", envs, verbose=1)
+model.learn(total_timesteps=10000)
+model.save("ppo_binpacking")
+
+# model = PPO.load("ppo_binpacking")
+
+test_env = create_env((10, 10, 10))
+obs = test_env.reset()
+
 for _ in range(1000):
     action, _ = model.predict(obs)
-    obs, reward, done, info = env.step(action)
+    obs, reward, done, info = test_env.step(action)
 
-    env.render()
+    if info['success']:
+        test_env.render()
 
     if done:
         break
 
-env.close()
+test_env.close()

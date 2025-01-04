@@ -1,4 +1,5 @@
 from constants import RotationType
+import random
 
 
 class Item:
@@ -53,3 +54,45 @@ class Item:
             self.length, self.width, self.height,
             self.position, self.rotation_type, self.get_volume()
         )
+
+
+def generate_items(length: int, width: int, height: int, n: int) -> list[Item]:
+    """
+    Split a large item into smaller items.
+    """
+    item_sizes = [[length, width, height]]
+
+    while (len(item_sizes) < n):
+        item = item_sizes.pop(random.choices(
+            range(len(item_sizes)),
+            weights=[item[0] * item[1] * item[2] for item in item_sizes],
+            k=1
+        )[0])
+
+        axis = random.choices(
+            [0, 1, 2],
+            weights=[item[0], item[1], item[2]],
+            k=1
+        )[0]
+
+        position = random.normalvariate(0.5, 0.1)
+        position = int(position * item[axis])
+        position = max(1, min(position, item[axis] - 1))
+
+        if position == 1 or position == item[axis] - 1:
+            item_sizes.append(item)
+            continue
+
+        item1 = item.copy()
+        item2 = item.copy()
+
+        item1[axis] = position
+        item2[axis] = item[axis] - position
+
+        item1[0], item1[1], item1[2] = random.sample([item1[0], item1[1], item1[2]], 3)
+        item2[0], item2[1], item2[2] = random.sample([item2[0], item2[1], item2[2]], 3)
+
+        item_sizes.append(item1)
+        item_sizes.append(item2)
+
+    return [Item('Item %d' % i, item[0], item[1], item[2]) for i, item in enumerate(item_sizes)]

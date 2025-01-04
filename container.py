@@ -1,15 +1,21 @@
 from item import Item
 
+import matplotlib.pyplot as plt
+import numpy as np
+
 
 class Container:
-    def __init__(self, name: str, length: int, width: int, height: int):
+    def __init__(self, name: str, length: int, width: int):
         self.name: str = name
         self.length: int = length
         self.width: int = width
-        self.height: int = height
+        self.height: int = 0
+        self.height_map: np.ndarray = np.zeros((length, width), dtype=int)
         self.items: list[Item] = []
 
     def reset(self):
+        self.height = 0
+        self.height_map = np.zeros((self.length, self.width), dtype=int)
         self.items = []
 
     def get_volume(self) -> int:
@@ -29,26 +35,40 @@ class Container:
         if x < 0 or y < 0 or z < 0:
             return False
 
-        if x + length > self.length or y + width > self.width or z + height > self.height:
+        if x + length > self.length or y + width > self.width:
             return False
 
-        old_position = item.position
-        item.position = position
-
-        if all([not item.overlap(other_item) for other_item in self.items]):
-            item.position = old_position
-            return True
-        
-        item.position = old_position
-        return False
-        
+        return True
 
     def add_item(self, item: Item, position: list[int]) -> bool:
-        if self.check_item_fit(item, position):
-            item.position = position
-            self.items.append(item)
-            return True
-        return False
+        if not self.check_item_fit(item, position):
+            return False
+
+        length, width, height = item.get_dimension()
+        x, y, z = position
+
+        z = np.max([self.height_map[x:x + length, y:y + width]])
+        item.position = [x, y, z]
+
+        self.items.append(item)
+
+        self.height_map[x:x+length, y:y+width] = z + height
+        self.height = max(self.height, z + height)
+
+        return True
+
+    def render(self):
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+
+        for item in self.items:
+            x, y, z = item.position
+            length, width, height = item.get_dimension()
+            ax.bar3d(x, y, z, length, width, height, edgecolor='black')
+
+        ax.set_xlim(0, self.length)
+        ax.set_ylim(0, self.width)
+        ax.set_zlim(0, self.height)
 
     def string(self) -> str:
         return "%s(%sx%sx%s) vol(%s) items(%s) filling_ratio(%s)" % (

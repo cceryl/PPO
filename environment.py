@@ -1,4 +1,3 @@
-from constants import RotationType
 from item import Item
 from container import Container
 from encoder import Encoder
@@ -15,10 +14,10 @@ class BinPackingEnv(gym.Env):
         super(BinPackingEnv, self).__init__()
 
         self.state = None
-        self.action_space = spaces.Discrete(len(items) * container.get_volume() * len(RotationType.All))
+        self.action_space = spaces.MultiDiscrete([len(items), 6, container.length, container.width])
         self.observation_space = spaces.Box(low=0, high=255, shape=(
-            container.length * container.width * 3 + len(items) * 3,))
-        self.reward_range = (0, 1)
+            container.length * container.width * 3 + len(items) * 3,), dtype=np.int32)
+        self.reward_range = (-1, 1)
         self.done = False
 
         self.container = container
@@ -48,17 +47,17 @@ class BinPackingEnv(gym.Env):
 
     def step(self, action):
         decoder = Decoder()
-        index, rotation, position = decoder.decode_action(action, self.container)
+        index, rotation, position = decoder.decode_action(action)
 
         if index >= len(self.available_items):
-            return self.state, -1, self.done, {}
+            return self.state, -1, self.done, {'success': False}
 
         item = self.available_items[index]
         item.rotation_type = rotation
 
         success = self.container.add_item(item, position)
         if not success:
-            return self.state, -1, self.done, {}
+            return self.state, -1, self.done, {'success': False}
 
         self.inserted_items.append(item)
         self.available_items.remove(item)
@@ -66,36 +65,15 @@ class BinPackingEnv(gym.Env):
         if len(self.available_items) == 0:
             self.done = True
 
-        filling_ratio_now = self.container.get_filling_ratio()
-        reward = filling_ratio_now - self.last_filling_ratio
-        self.last_filling_ratio = filling_ratio_now
+        filling_ratio = self.container.get_filling_ratio()
+        reward = filling_ratio - self.last_filling_ratio
+        self.last_filling_ratio = filling_ratio
 
         self.state = self.encoder.encode_state(self.container, self.available_items,
                                                len(self.items) - len(self.available_items))
 
-        return self.state, reward, self.done, {}
+        return self.state, reward, self.done, {'success': True}
 
     def render(self):
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
-
-        for item in self.inserted_items:
-            x, y, z = item.position
-            length, width, height = item.get_dimension()
-            ax.bar3d(x, y, z, length, width, height)
-
-        ax.set_xlabel('X')
-        ax.set_ylabel('Y')
-        ax.set_zlabel('Z')
-
-        ax.set_xlim([0, self.container.length])
-        ax.set_ylim([0, self.container.width])
-        ax.set_zlim([0, self.container.height])
-
+        self.container.render()
         plt.show()
-
-    def register():
-        gym.envs.register(
-            id='BinPacking-v0',
-            entry_point='environment:BinPackingEnv',
-        )
