@@ -49,7 +49,7 @@ class BinPackingEnv(gym.Env):
 
         return self.state
 
-    def step(self, action):
+    def step(self, action: list[int]):
         decoder = Decoder()
         index, rotation, position = decoder.decode_action(action)
 

@@ -28,7 +28,7 @@ class Item:
             RotationType.Rotate_HWL: (self.height, self.width, self.length)
         }[self.rotation_type]
 
-    def overlap(self, other_item) -> bool:
+    def overlap(self, other_item: 'Item') -> bool:
         """
         Check if the item overlaps with another item.
         """
@@ -48,12 +48,6 @@ class Item:
             return False
 
         return True
-
-    def string(self) -> str:
-        return "(%sx%sx%s) pos(%s) rot(%s) vol(%s)" % (
-            self.length, self.width, self.height,
-            self.position, self.rotation_type, self.get_volume()
-        )
 
 
 def generate_items(length: int, width: int, height: int, n: int) -> list[Item]:

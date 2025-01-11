@@ -68,9 +68,3 @@ class Container:
         ax.set_zlim(0, self.height)
 
         ax.text2D(0.05, 0.95, "Filling ratio: %.2f" % self.get_filling_ratio(), transform=ax.transAxes)
-
-    def string(self) -> str:
-        return "%s(%sx%sx%s) vol(%s) items(%s) filling_ratio(%s)" % (
-            self.name, self.length, self.width, self.height,
-            self.get_volume(), len(self.items), self.get_filling_ratio()
-        )
