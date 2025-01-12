@@ -22,7 +22,7 @@ class Container:
         return self.length * self.width * self.height
 
     def get_filling_ratio(self) -> float:
-        return sum([item.get_volume() for item in self.items]) / self.get_volume()
+        return sum([item.get_volume() for item in self.items]) / self.get_volume() if self.height > 0 else 1
 
     def check_item_fit(self, item: Item, position: list[int]) -> bool:
         """

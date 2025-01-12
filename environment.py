@@ -1,20 +1,21 @@
-from item import Item
 from container import Container
 from encoder import Encoder
 from decoder import Decoder
+from item import generate_items
 
 import gym
 from gym import spaces
 import numpy as np
 import matplotlib.pyplot as plt
+import random
 
 
 class BinPackingEnv(gym.Env):
-    def __init__(self, container: Container, items: list[Item]):
+    def __init__(self, container: Container, max_items: int):
         super(BinPackingEnv, self).__init__()
 
         self.state = None
-        self.action_space = spaces.MultiDiscrete([len(items), 6, container.length, container.width])
+        self.action_space = spaces.MultiDiscrete([max_items, 6, container.length, container.width])
         self.observation_space = spaces.Dict({
             'container': spaces.Box(
                 low=np.zeros((container.length, container.width, 7), dtype=np.float32),
@@ -23,34 +24,26 @@ class BinPackingEnv(gym.Env):
                 ], dtype=np.float32),
                 dtype=np.float32
             ),
-            'items_obs': spaces.Box(low=0, high=max(container.length, container.width, container.height), shape=(len(items), 3), dtype=np.float32),
-            'item_mask': spaces.Box(low=0, high=1, shape=(len(items),), dtype=bool)
+            'items_obs': spaces.Box(low=0, high=max(container.length, container.width, container.height), shape=(max_items, 3), dtype=np.float32),
+            'item_mask': spaces.Box(low=0, high=1, shape=(max_items,), dtype=bool)
         })
-        self.reward_range = (0, 1)
         self.done = False
 
         self.container = container
-        self.items = items.copy()
-        self.inserted_items = []
-        self.available_items = items.copy()
-        self.last_filling_ratio = 0
-        self.last_height = 0
-        self.last_average_height = 0
-
         self.encoder = Encoder()
         self.decoder = Decoder()
-
-        self.state = self.encoder.encode_state(self.container, self.available_items, len(self.items))
+        self.max_items = max_items
 
     def reset(self):
         self.container.reset()
-        self.inserted_items = []
-        self.available_items = self.items.copy()
-        self.last_filling_ratio = 0
-        self.last_height = 0
-        self.last_average_height = 0
 
-        self.state = self.encoder.encode_state(self.container, self.available_items, len(self.items))
+        max_height = max(self.container.length, self.container.width)
+        height = random.randint(1, max_height)
+        n_items = random.randint(1, self.max_items)
+        self.items = generate_items(self.container.length, self.container.width, height, n_items)
+        self.inserted_items = []
+
+        self.state = self.encoder.encode_state(self.container, self.items, self.max_items)
 
         self.done = False
 
@@ -60,36 +53,27 @@ class BinPackingEnv(gym.Env):
         decoder = Decoder()
         index, rotation, position = decoder.decode_action(action)
 
-        if index >= len(self.available_items):
-            return self.state, 0, self.done, {'success': False}
+        if index >= len(self.items):
+            return self.state, -1, self.done, {'success': False, 'reason': 'Index out of range'}
 
-        item = self.available_items[index]
+        item = self.items[index]
         item.rotation_type = rotation
 
         success = self.container.add_item(item, position)
         if not success:
-            return self.state, 0, self.done, {'success': False}
+            return self.state, -1, self.done, {'success': False, 'reason': 'Item does not fit'}
 
         self.inserted_items.append(item)
-        self.available_items.remove(item)
+        self.items.remove(item)
 
-        if len(self.available_items) == 0:
+        if len(self.items) == 0:
             self.done = True
 
         filling_ratio = self.container.get_filling_ratio()
         height = self.container.height
-        average_height = sum([(item.position[2] + item.get_dimension()[2])
-                             for item in self.inserted_items]) / len(self.inserted_items)
+        reward = 1 + filling_ratio - 0.1 * height
 
-        reward = (filling_ratio - self.last_filling_ratio) * 10 - \
-            (height - self.last_height) * 0.1 - \
-            (average_height - self.last_average_height) * 0.1
-
-        self.last_filling_ratio = filling_ratio
-        self.last_height = self.container.height
-        self.last_average_height = average_height
-
-        self.state = self.encoder.encode_state(self.container, self.available_items, len(self.items))
+        self.state = self.encoder.encode_state(self.container, self.items, self.max_items)
 
         return self.state, reward, self.done, {'success': True}
 
