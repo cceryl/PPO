@@ -9,10 +9,24 @@ class Encoder:
         pass
 
     def encode_item(self, item: Item) -> np.ndarray:
-        return np.array([item.length, item.width, item.height]).flatten().astype(int)
+        return np.array([item.length, item.width, item.height]).astype(np.float32)
 
-    def encode_items(self, items: list[Item]) -> np.ndarray:
-        return np.array([self.encode_item(item) for item in items]).flatten().astype(int)
+    def encode_items(self, items: list[Item], n_items: int) -> tuple[np.ndarray, np.ndarray]:
+        """
+        Encode the items by (length, width, height) for each item.
+        If the number of items is less than n_items, the remaining items are padded with zeros.
+        Extra items will be ignored, meaning that the agent can only see the first n_items items.
+        Return the encoded items and a mask to indicate the presence of an item.
+        """
+
+        encoded = np.zeros((n_items, 3), dtype=np.float32)
+        for i, item in enumerate(items[:n_items]):
+            encoded[i] = self.encode_item(item)
+
+        mask = np.zeros(n_items, dtype=bool)
+        mask[:len(items)] = True
+
+        return encoded, mask
 
     def encode_container(self, container: Container) -> np.ndarray:
         """
@@ -69,8 +83,23 @@ class Encoder:
 
                 encoded[x, y] = np.array([h, higher_len, higher_wid, pos_len, neg_len, pos_wid, neg_wid])
 
-        return encoded.flatten().astype(int)
+        return encoded.astype(np.float32)
 
-    def encode_state(self, container: Container, items: list[Item], padding: int = 0) -> np.ndarray:
-        items = items + [Item('', 0, 0, 0)] * padding
-        return np.concatenate([self.encode_items(items), self.encode_container(container)]).astype(int)
+    def encode_state(self, container: Container, items: list[Item], n_items: int) -> dict[str, np.ndarray]:
+        """
+        Encode the state of the environment.
+        The encoded container is a height map with plane information. Size: (container.length * container.width * 7).
+        The encoded items are a list of item dimensions. Size: (n_items * 3).
+        The item mask is a list of zeros and ones to indicate the presence of an item. Size: (n_items).
+        If the number of items is less than n_items, the remaining items are padded with zeros.
+        Extra items will be ignored, meaning that the agent can only see the first n_items items.
+        """
+
+        container_encoded = self.encode_container(container)
+        items_encoded, items_mask = self.encode_items(items, n_items)
+
+        return {
+            'container': container_encoded,
+            'items_obs': items_encoded,
+            'item_mask': items_mask
+        }

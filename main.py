@@ -29,8 +29,8 @@ envs = [
 
 env = DummyVecEnv(envs)
 
-model = PPO("MlpPolicy", env, verbose=1)
-model.learn(total_timesteps=32768 * len(envs))
+model = PPO("MultiInputPolicy", env, verbose=1)
+model.learn(total_timesteps=50000)
 model.save("ppo_binpacking")
 
 model = PPO.load("ppo_binpacking")

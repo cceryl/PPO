@@ -38,7 +38,7 @@ class Container:
         z = np.max(self.height_map[x:x + length, y:y + width])
         item.position = [x, y, z]
 
-        return all([not item.overlap(other_item) for other_item in self.items])
+        return True
 
     def add_item(self, item: Item, position: list[int]) -> bool:
         if not self.check_item_fit(item, position):

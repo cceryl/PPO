@@ -15,8 +15,17 @@ class BinPackingEnv(gym.Env):
 
         self.state = None
         self.action_space = spaces.MultiDiscrete([len(items), 6, container.length, container.width])
-        self.observation_space = spaces.Box(low=0, high=255, shape=(
-            container.length * container.width * 7 + len(items) * 3,), dtype=np.int32)
+        self.observation_space = spaces.Dict({
+            'container': spaces.Box(
+                low=np.zeros((container.length, container.width, 7), dtype=np.float32),
+                high=np.full((container.length, container.width, 7), [
+                    container.height, container.length, container.width, container.length, container.length, container.width, container.width
+                ], dtype=np.float32),
+                dtype=np.float32
+            ),
+            'items_obs': spaces.Box(low=0, high=max(container.length, container.width, container.height), shape=(len(items), 3), dtype=np.float32),
+            'item_mask': spaces.Box(low=0, high=1, shape=(len(items),), dtype=bool)
+        })
         self.reward_range = (0, 1)
         self.done = False
 
@@ -31,8 +40,7 @@ class BinPackingEnv(gym.Env):
         self.encoder = Encoder()
         self.decoder = Decoder()
 
-        self.state = self.encoder.encode_state(self.container, self.available_items,
-                                               len(self.items) - len(self.available_items))
+        self.state = self.encoder.encode_state(self.container, self.available_items, len(self.items))
 
     def reset(self):
         self.container.reset()
@@ -42,8 +50,7 @@ class BinPackingEnv(gym.Env):
         self.last_height = 0
         self.last_average_height = 0
 
-        self.state = self.encoder.encode_state(self.container, self.available_items,
-                                               len(self.items) - len(self.available_items))
+        self.state = self.encoder.encode_state(self.container, self.available_items, len(self.items))
 
         self.done = False
 
@@ -82,8 +89,7 @@ class BinPackingEnv(gym.Env):
         self.last_height = self.container.height
         self.last_average_height = average_height
 
-        self.state = self.encoder.encode_state(self.container, self.available_items,
-                                               len(self.items) - len(self.available_items))
+        self.state = self.encoder.encode_state(self.container, self.available_items, len(self.items))
 
         return self.state, reward, self.done, {'success': True}
 
