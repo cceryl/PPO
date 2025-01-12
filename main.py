@@ -1,33 +1,75 @@
-import gym
+import os
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv
+from stable_baselines3.common.callbacks import CheckpointCallback
 
 from container import Container
 from environment import BinPackingEnv
 
-container = Container('Container', 10, 10)
+container_size = (10, 10)
 max_items = 10
+n_envs = 1
+restart = False
+test = False
 
-env = BinPackingEnv(container, max_items)
+def create_env():
+    return lambda: BinPackingEnv(Container('Container', container_size[0], container_size[1]), max_items)
 
-model = PPO("MultiInputPolicy", env, verbose=1)
-model.learn(total_timesteps=50000)
-model.save("ppo_binpacking")
 
-model = PPO.load("ppo_binpacking")
+envs = [create_env() for _ in range(n_envs)]
+env = DummyVecEnv(envs)
 
-obs = env.reset()
-for _ in range(10000):
-    action, _ = model.predict(obs)
-    obs, reward, done, info = env.step(action)
+os.makedirs('./models/', exist_ok=True)
+save_model_callback = CheckpointCallback(save_freq=10000, save_path='./models/', name_prefix='ppo_binpacking')
 
-    if info['success']:
-        env.render()
-    else:
-        print(f"Failed: {info['reason']}")
+if test:
+    best_model_steps = 0
+    for file in os.listdir('./models/'):
+        if file.startswith('ppo_binpacking') and file.endswith('.zip'):
+            steps = int(file.split('_')[2])
+            if steps > best_model_steps:
+                best_model_steps = steps
 
-    if done:
-        print(f"Filling ratio: {env.container.get_filling_ratio()}")
-        break
+    best_model_path = f'./models/ppo_binpacking_{best_model_steps}_steps.zip'
+    model = PPO.load(best_model_path)
+    
+    test_env = BinPackingEnv(Container('Container', container_size[0], container_size[1]), max_items)
+    obs = test_env.reset()
+    done = False
+    
+    print(f"items: {len(test_env.items)}")
 
-env.close()
+    while not done:
+        action, _ = model.predict(obs)
+        obs, rewards, done, info = test_env.step(action)
+
+        if info['success']:
+            test_env.render()
+        else:
+            print(f"failure: {info['reason']}")
+
+    print(f"filling ratio: {test_env.container.get_filling_ratio()}")    
+
+elif restart:
+    model = PPO("MultiInputPolicy", env, verbose=1)
+    model.learn(total_timesteps=1000000, callback=save_model_callback)
+
+else:
+    best_model_steps = 0
+    for file in os.listdir('./models/'):
+        if file.startswith('ppo_binpacking') and file.endswith('.zip'):
+            steps = int(file.split('_')[2])
+            if steps > best_model_steps:
+                best_model_steps = steps
+
+    best_model_path = f'./models/ppo_binpacking_{best_model_steps}_steps.zip'
+    print(f"loading model: {best_model_path}")
+    model = PPO.load(best_model_path)
+    model.set_env(env)
+
+    for file in os.listdir('./models/'):
+        os.remove(f'./models/{file}')
+    
+    model.save('./models/ppo_binpacking_0_steps.zip')
+
+    model.learn(total_timesteps=1000000, callback=save_model_callback)
