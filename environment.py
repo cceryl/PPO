@@ -6,7 +6,6 @@ from item import generate_items
 
 import random
 
-
 import gym
 from gym import spaces
 import numpy as np

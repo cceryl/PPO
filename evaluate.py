@@ -11,7 +11,7 @@ from stable_baselines3.common.callbacks import CheckpointCallback
 
 container_size = (10, 10)
 items = generate_items(8, 8, 8, 10)
-tree_search = True
+tree_search = False
 tree_split_factor = 2
 tree_split_depth = 3
 
