@@ -1,16 +1,19 @@
+from container import Container
+from environment import BinPackingEnv
+
 import os
+
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv
 from stable_baselines3.common.callbacks import CheckpointCallback
 
-from container import Container
-from environment import BinPackingEnv
 
 container_size = (10, 10)
 max_items = 10
 n_envs = 1
 restart = False
-test = False
+test = True
+
 
 def create_env():
     return lambda: BinPackingEnv(Container('Container', container_size[0], container_size[1]), max_items)
@@ -32,11 +35,11 @@ if test:
 
     best_model_path = f'./models/ppo_binpacking_{best_model_steps}_steps.zip'
     model = PPO.load(best_model_path)
-    
+
     test_env = BinPackingEnv(Container('Container', container_size[0], container_size[1]), max_items)
     obs = test_env.reset()
     done = False
-    
+
     print(f"items: {len(test_env.items)}")
 
     while not done:
@@ -48,7 +51,7 @@ if test:
         else:
             print(f"failure: {info['reason']}")
 
-    print(f"filling ratio: {test_env.container.get_filling_ratio()}")    
+    print(f"filling ratio: {test_env.container.get_filling_ratio()}")
 
 elif restart:
     model = PPO("MultiInputPolicy", env, verbose=1)
@@ -69,7 +72,7 @@ else:
 
     for file in os.listdir('./models/'):
         os.remove(f'./models/{file}')
-    
+
     model.save('./models/ppo_binpacking_0_steps.zip')
 
     model.learn(total_timesteps=1000000, callback=save_model_callback)

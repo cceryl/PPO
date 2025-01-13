@@ -3,11 +3,12 @@ from encoder import Encoder
 from decoder import Decoder
 from item import generate_items
 
+import random
+
+
 import gym
 from gym import spaces
 import numpy as np
-import matplotlib.pyplot as plt
-import random
 
 
 class BinPackingEnv(gym.Env):
@@ -44,7 +45,6 @@ class BinPackingEnv(gym.Env):
         self.inserted_items = []
 
         self.state = self.encoder.encode_state(self.container, self.items, self.max_items)
-
         self.done = False
 
         return self.state
@@ -79,4 +79,3 @@ class BinPackingEnv(gym.Env):
 
     def render(self):
         self.container.render()
-        plt.show()

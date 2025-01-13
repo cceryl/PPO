@@ -1,6 +1,6 @@
 from item import Item
+from render import render_container
 
-import matplotlib.pyplot as plt
 import numpy as np
 
 
@@ -12,6 +12,11 @@ class Container:
         self.height: int = 0
         self.height_map = np.zeros((length, width), dtype=int)
         self.items: list[Item] = []
+
+    def copy(self) -> 'Container':
+        container = Container(self.name, self.length, self.width, self.height)
+        container.items = [item.copy() for item in self.items]
+        return container
 
     def reset(self):
         self.height = 0
@@ -55,16 +60,4 @@ class Container:
         return True
 
     def render(self):
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
-
-        for item in self.items:
-            x, y, z = item.position
-            length, width, height = item.get_dimension()
-            ax.bar3d(x, y, z, length, width, height, edgecolor='black')
-
-        ax.set_xlim(0, self.length)
-        ax.set_ylim(0, self.width)
-        ax.set_zlim(0, self.height)
-
-        ax.text2D(0.05, 0.95, "Filling ratio: %.2f" % self.get_filling_ratio(), transform=ax.transAxes)
+        render_container(self.items, [self.length, self.width, self.height]).show()

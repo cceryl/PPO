@@ -1,7 +1,4 @@
 from constants import RotationType
-from container import Container
-
-import numpy as np
 
 
 class Decoder:

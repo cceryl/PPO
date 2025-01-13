@@ -1,4 +1,5 @@
 from constants import RotationType
+
 import random
 
 
@@ -11,10 +12,19 @@ class Item:
         self.rotation_type: RotationType = RotationType.Rotate_LWH
         self.position: list[int] = [0, 0, 0]
 
+    def copy(self) -> 'Item':
+        item = Item(self.name, self.length, self.width, self.height)
+        item.rotation_type = self.rotation_type
+        item.position = self.position.copy()
+        return item
+
+    def __eq__(self, other: 'Item') -> bool:
+        return self.name == other.name and self.length == other.length and self.width == other.width and self.height == other.height
+
     def get_volume(self) -> int:
         return self.length * self.width * self.height
 
-    def get_dimension(self) -> tuple:
+    def get_dimension(self) -> tuple[int, int, int]:
         """
         Get the real dimension of the item according to the rotation type.
         """
@@ -95,4 +105,4 @@ def generate_items(length: int, width: int, height: int, n: int) -> list[Item]:
     if max_steps == 0:
         raise Exception('Failed to generate items: reached max steps')
 
-    return [Item('Item %d' % i, item[0], item[1], item[2]) for i, item in enumerate(item_sizes)]
+    return [Item(f'Item {i}', item[0], item[1], item[2]) for i, item in enumerate(item_sizes)]
