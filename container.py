@@ -14,8 +14,10 @@ class Container:
         self.items: list[Item] = []
 
     def copy(self) -> 'Container':
-        container = Container(self.name, self.length, self.width, self.height)
+        container = Container(self.name, self.length, self.width)
         container.items = [item.copy() for item in self.items]
+        container.height_map = np.copy(self.height_map)
+        container.height = self.height
         return container
 
     def reset(self):
