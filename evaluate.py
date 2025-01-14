@@ -11,9 +11,9 @@ from stable_baselines3.common.callbacks import CheckpointCallback
 
 container_size = (10, 10)
 items = generate_items(8, 8, 8, 10)
-tree_search = False
+tree_search = True
 tree_split_factor = 2
-tree_split_depth = 3
+tree_prune_threshold = 5
 
 env = BinPackingTestEnv(Container('Container', container_size[0], container_size[1]), items)
 
@@ -28,38 +28,26 @@ best_model_path = f'./models/ppo_binpacking_{best_model_steps}_steps.zip'
 model = PPO.load(best_model_path)
 
 if tree_search:
+    done = False
     env.reset()
     test_envs = [env]
-    current_depth = 0
 
-    while current_depth < tree_split_depth:
-        new_envs = []
+    while not done:
+        new_envs: list[BinPackingTestEnv] = []
         for env in test_envs:
             for _ in range(tree_split_factor):
                 copy = env.copy()
                 obs = copy.state
                 action, _ = model.predict(obs)
-                copy.step(action)
+                _, _, done, _ = copy.step(action)
                 new_envs.append(copy)
-        
-        test_envs = new_envs
-        current_depth += 1
 
-    results: list[tuple[BinPackingTestEnv, float]] = []
+        new_envs.sort(key=lambda x: x.container.get_filling_ratio(), reverse=True)
+        test_envs = new_envs[:tree_prune_threshold]
 
     for env in test_envs:
-        obs = env.state
-        done = False
-        while not done:
-            action, _ = model.predict(obs)
-            obs, rewards, done, info = env.step(action)
-
-        results.append((env, env.container.get_filling_ratio()))
-
-    results.sort(key=lambda x: x[1], reverse=True)
-    for i, (env, ratio) in enumerate(results):
-        print(f"Result {i + 1}: Filling ratio: {ratio}")
-        env.container.render()
+        print(f"filling ratio: {env.container.get_filling_ratio()}")
+        env.render()
 
 else:
     obs = env.reset()
